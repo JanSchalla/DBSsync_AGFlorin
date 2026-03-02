@@ -1,6 +1,6 @@
 {
     "COMMENTS_FOR_USERS": {
-        "SavingFormatExternal": "Options are: .set, .fif, .pkl",
+        "SavingFormatExternal": "Options are: .set, .fif, .pkl, .mat",
         "SavingFormatInternal": "Options are: .set, .fif, .pkl, .mat",
         "SavingAllAsOne": "Options are: true or false",
         "SavingFormatAllAsOne": "Options are: .pkl",
@@ -10,8 +10,8 @@
         "EcgLowpassFilter": "Options are: float value in Hz (e.g. 60.0)"
     },
 
-    "SavingFormatExternal": ".fif",
-    "SavingFormatInternal": ".fif",
+    "SavingFormatExternal": ".set",
+    "SavingFormatInternal": ".set",
     "SavingAllAsOne": false,
     "SavingFormatAllAsOne": ".pkl",
 
