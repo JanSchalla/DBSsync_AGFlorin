@@ -226,6 +226,8 @@ def load_json_file(self, file_name: str):
             'LFP Recording start': dt1_reformatted,
             'LFP Recording end': rec_end_time,
             'LFP Recording duration': f'{rec_dur_min} min, {rec_dur_sec} sec, {rec_dur_msec} ms',
+            'First packet time (ms)': ticks_in_ms[0],
+            'Last packet time (ms)': ticks_in_ms[-1],
             }])
             streamings_df = pd.concat([streamings_df, new_row], ignore_index=True)
 
@@ -318,8 +320,63 @@ def load_json_file(self, file_name: str):
         # Filter BrainSenseRaws based on user selection
         BrainSenseRawsCorrected = {k: v for k, v in BrainSenseRawsCorrected.items() if k in selected_streams}
 
-        # There should be only one selected stream
-        selected_stream_id = selected_streams[0]
+        # Check how many streams were selected
+        if len(selected_streams) > 1:
+            QMessageBox.warning(
+                self, "Multiple Streams Selected", 
+                f"{len(selected_streams)} streams were selected and will be concatenated. \n"
+                f"The following streams will be concatenated: {', '.join(selected_streams)}"
+                )
+            # calculate diff between end time of each stream and start time of next stream
+            for i in range(len(selected_streams) - 1):
+                end_time_current = streamings_df_corrected.loc[
+                    streamings_df_corrected['Streaming id'] == selected_streams[i], 
+                    'Last packet time (ms)'
+                    ].values[0]
+                start_time_next = streamings_df_corrected.loc[
+                    streamings_df_corrected['Streaming id'] == selected_streams[i + 1], 
+                    'First packet time (ms)'
+                    ].values[0]
+                diff = (start_time_next - 250) - end_time_current
+                # check if there was a clock reset (i.e., negative diff)
+                if diff < 0:
+                    print(f'A clock reset was detected between {selected_streams[i]} and {selected_streams[i + 1]}. Adding 3276800ms to the next stream timestamps.')
+                    start_time_next += 3276800
+                    # recalculate diff
+                    diff = (start_time_next - 250) - end_time_current
+                print(f'Time gap between {selected_streams[i]} and {selected_streams[i + 1]}: {diff} ms')
+
+                # check that duration of second stream matches number of samples
+                # sometimes, packets have an irregular size, leading to a mismatch between expected duration and actual number of samples
+                # check if first packet sizes is always either 62 or 63 samples to get real start time
+                packet_sizes = streamings_dict[selected_streams[i + 1]][list(streamings_dict[selected_streams[i + 1]].keys())[0]]['GlobalPacketSizes']
+                # get sizes that are not 62 or 63
+                if packet_sizes[0] not in [62, 63]:
+                    diff -= (packet_sizes[0] - 62) * 4  # each sample is 4ms at 250Hz
+                # irregular_sizes = [size for size in packet_sizes[0] if size not in [62, 63]]
+                # #for size that are not 62 or 63, calculate the difference
+                # if irregular_sizes:
+                #     # assume they should be 62, sum up the "extra samples"
+                #     # when packets have more samples than 62/63, it means that the recording 
+                #     # device actually sent more samples, which should be taken into account 
+                #     # when adding NaN values for concatenation
+                #     total_extra_size = sum([size - 62 for size in irregular_sizes]) 
+                #     print(f'Irregular packet sizes detected in {selected_streams[i + 1]}.')
+                #     diff -= total_extra_size * 4  # each sample is 4ms at 250Hz  # update diff accordingly
+
+                # Concatenate the selected streams by adding NaNs for the time gap
+                first_temp = BrainSenseRawsCorrected[selected_streams[i]].get_data()
+                second_temp = BrainSenseRawsCorrected[selected_streams[i + 1]].get_data()
+                n_missing_samples = int(diff / 4)  # since sampling rate is 250Hz, each sample is 4ms
+                n_channels = first_temp.shape[0]
+                nan_padding = np.full((n_channels, n_missing_samples), np.nan)
+                concatenated_data = np.concatenate((first_temp, nan_padding, second_temp), axis=1)
+                info = BrainSenseRawsCorrected[selected_streams[i]].info
+                BrainSenseRawsCorrected[selected_streams[i + 1]] = mne.io.RawArray(concatenated_data, info)
+            # After concatenation, keep only the last stream as it contains all data
+            selected_stream_id = selected_streams[-1]
+        else:
+            selected_stream_id = selected_streams[0]
 
         # Assign the corresponding MNE Raw object to dataset
         self.dataset_intra.raw_data = BrainSenseRawsCorrected[selected_stream_id]
@@ -363,7 +420,7 @@ def load_ext_file(self):
      # Open a QFileDialog to select an external file
     file_name, _ = QFileDialog.getOpenFileName(
         self, "Select External File", "", 
-        "XDF Files (*.xdf);;FIF Files (*.fif);;Poly5 Files (*.Poly5)"
+        "XDF Files (*.xdf);;FIF Files (*.fif);;Poly5 Files (*.Poly5);; MAT Files (*.mat)"
         )
     self.file_label_xdf.setText(f"Selected File: {basename(file_name)}")
     self.dataset_extra.file_name = basename(file_name)
@@ -422,6 +479,15 @@ def load_ext_file(self):
 
     elif file_name.endswith(".fif"):
         load_fif_file_ext(self, file_name)
+
+    elif file_name.endswith(".mat"):
+        load_mat_file_ext(self, file_name)
+
+    else:
+        QMessageBox.warning(
+            self, "Unsupported Format", 
+            ".mat files are not supported as external files. Please use .xdf, .fif, .mat or .poly5 files."
+            )
 
 
 def load_poly5_file(
@@ -493,7 +559,29 @@ def load_fif_file_ext(
     except Exception as e:
         QMessageBox.critical(self, "Error", f"Failed to load .fif file: {e}")
 
+def load_mat_file_ext(
+        self,
+        file_name: str,
+        ):
+    """Load .mat file."""
+    try:
+        # raw_data = mne.io.read_raw_fif(file_name, preload=True)
+        raw_data = read_raw_fieldtrip(
+            file_name, info={}, data_name="tAcc"
+            )
 
+        self.dataset_extra.raw_data = raw_data
+        self.dataset_extra.sf = raw_data.info["sfreq"]
+        self.dataset_extra.ch_names = raw_data.ch_names
+        self.dataset_extra.times = raw_data.times
+
+        # Enable channel selection and plot buttons
+        self.channel_label_xdf.setEnabled(True)
+        self.btn_select_channel_xdf.setEnabled(True)
+        self.btn_select_ecg_channel.setEnabled(True)
+    
+    except Exception as e:
+        QMessageBox.critical(self, "Error", f"Failed to load .mat file: {e}")
 
 def find_sync_stream(
         self, 
@@ -553,8 +641,8 @@ def save_datasets(self):
             else:
                 if saving_format_external == ".set" and saving_format_internal == ".set":
                     save_datasets_as_set(self)
-                elif saving_format_external == ".fif" and saving_format_internal == ".fif":
-                    save_datasets_as_fif(self)  
+                # elif saving_format_external == ".fif" and saving_format_internal == ".fif":
+                #     save_datasets_as_fif(self)  
                 elif saving_format_external == ".pkl" and saving_format_internal == ".pkl":
                     synchronize_datasets_as_pickles(self)
                 else:
@@ -565,6 +653,12 @@ def save_datasets(self):
         else:
             if saving_format_external == ".mat" and saving_format_internal == ".mat":
                     synchronize_datasets_as_mat(self)
+            if saving_format_external == ".fif" and saving_format_internal == ".fif":
+                    save_datasets_as_fif(self)
+            # if saving_format_external == ".pkl" and saving_format_internal == ".pkl":
+            #         synchronize_datasets_as_pickles(self)
+            if saving_format_external == ".set" and saving_format_internal == ".set":
+                    save_datasets_as_set(self)
             else:
                 QMessageBox.warning(
                     self, "Saving Format Error", 
@@ -574,13 +668,15 @@ def save_datasets(self):
 
 
 def save_int_as_set(self):
+    # get intracranial file title without extension (keep everything before the last .)
+    int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
     if self.dataset_intra.flag_cleaned == True:
         lfp_title = (
-            "INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name[:-4]) + ".set"
+            "INTRACRANIAL_CLEANED_" + str(int_title) + ".set"
             )
     else:
         lfp_title = (
-            "INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + ".set"
+            "INTRACRANIAL_" + str(int_title) + ".set"
             )
 
     if self.folder_path is not None:
@@ -607,13 +703,15 @@ def save_int_as_set(self):
 
 
 def save_int_as_fif(self):
+    # get intracranial file title without extension (keep everything before the last .)
+    int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
     if self.dataset_intra.flag_cleaned == True:
         lfp_title = (
-            "INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name[:-4]) + "_raw.fif"
+            "INTRACRANIAL_CLEANED_" + str(int_title) + "_raw.fif"
             )
     else:
         lfp_title = (
-            "INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + "_raw.fif"
+            "INTRACRANIAL_" + str(int_title) + "_raw.fif"
             )
 
     if self.folder_path is not None:
@@ -644,13 +742,15 @@ def save_int_as_fif(self):
 
 
 def save_int_as_pickle(self):
+    # get intracranial file title without extension (keep everything before the last .)
+    int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
     if self.dataset_intra.flag_cleaned == True:
         lfp_title = (
-            "INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name[:-4]) + ".pkl"
+            "INTRACRANIAL_CLEANED_" + str(int_title) + ".pkl"
             )
     else:
         lfp_title = (
-            "INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + ".pkl"
+            "INTRACRANIAL_" + str(int_title) + ".pkl"
             )
     
     LFP_array = self.dataset_intra.raw_data.get_data()
@@ -676,13 +776,15 @@ def save_int_as_pickle(self):
 
 
 def save_int_as_mat(self):
+    # get intracranial file title without extension (keep everything before the last .)
+    int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
     if self.dataset_intra.flag_cleaned == True:
         lfp_title = (
-            "INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name[:-4]) + ".mat"
+            "INTRACRANIAL_CLEANED_" + str(int_title) + ".mat"
             )
     else:
         lfp_title = (
-            "INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + ".mat"
+            "INTRACRANIAL_" + str(int_title) + ".mat"
             )
         
     if self.folder_path is not None:
@@ -720,8 +822,15 @@ def save_datasets_as_set(self):
     The function saves the synchronized datasets in the specified folder.
     If no folder is selected, it saves them in the current working directory.
     """
-    events, _ = mne.events_from_annotations(self.dataset_extra.raw_data)
-    inv_dic = {v: str(k) for k, v in _.items()}
+    ANNOTATIONS = False # Default: no annotations
+    print("Checking for annotations...")
+    # check if the recordings have annotations
+    ## if yes, transfer the events from the external to the intracranial recording
+    if hasattr(self.dataset_extra.raw_data, "annotations") and len(self.dataset_extra.raw_data.annotations) > 0:
+        ANNOTATIONS = True
+        print("Annotations found.")
+        events, _ = mne.events_from_annotations(self.dataset_extra.raw_data)
+        inv_dic = {v: str(k) for k, v in _.items()}
 
     ## offset intracranial recording (crop everything that is more than 1s before the artifact)
     new_start_intracranial = self.dataset_intra.art_start - 1
@@ -731,47 +840,53 @@ def save_datasets_as_set(self):
     new_start_external = self.dataset_extra.art_start - 1
     TMSi_rec_offset = self.dataset_extra.synced_data
 
-    ## transfer of the events from the external to the intracranial recording
-    # create a duplicate of the events to manipulate it without changing the external one
-    events_lfp = deepcopy(events)
-
-    # get the events from the external in time instead of samples to account 
-    # for the different sampling frequencies
-    events_in_time = events[:,0]/self.dataset_extra.sf
-
-    # then offset the events in time to the new start of the external recording
-    events_in_time_offset = events_in_time - new_start_external
-
     if self.dataset_intra.eff_sf is not None:
         lfp_sf = self.dataset_intra.eff_sf
     else:
         lfp_sf = self.dataset_intra.sf
 
-    # convert the events in time offset to samples corresponding to 
-    # the sampling frequency of the intracranial recording
-    # because the annotations object works with samples, not timings
-    events_in_time_offset_lfp = events_in_time_offset * lfp_sf
-    events_lfp[:,0] = events_in_time_offset_lfp
+    if ANNOTATIONS:
+        ## transfer of the events from the external to the intracranial recording
+        # create a duplicate of the events to manipulate it without changing the external one
+        events_lfp = deepcopy(events)
 
-    ## create an annotation object for the intracranial recording
-    annotations_lfp = mne.annotations_from_events(
-        events_lfp, sfreq=lfp_sf, event_desc=inv_dic
-        )
+        # get the events from the external in time instead of samples to account 
+        # for the different sampling frequencies
+        events_in_time = events[:,0]/self.dataset_extra.sf
 
-    lfp_rec_offset.set_annotations(None) # make sure that no annotations are present
-    lfp_rec_offset.set_annotations(annotations_lfp) # set the new annotations
+        # then offset the events in time to the new start of the external recording
+        events_in_time_offset = events_in_time - new_start_external
 
+        # convert the events in time offset to samples corresponding to 
+        # the sampling frequency of the intracranial recording
+        # because the annotations object works with samples, not timings
+        events_in_time_offset_lfp = events_in_time_offset * lfp_sf
+        events_lfp[:,0] = events_in_time_offset_lfp
+
+        ## create an annotation object for the intracranial recording
+        annotations_lfp = mne.annotations_from_events(
+            events_lfp, sfreq=lfp_sf, event_desc=inv_dic
+            )
+
+        lfp_rec_offset.set_annotations(None) # make sure that no annotations are present
+        lfp_rec_offset.set_annotations(annotations_lfp) # set the new annotations
+
+        TMSi_rec_offset_annotations_onset = TMSi_rec_offset.annotations.onset - new_start_external
+        lfp_rec_offset_annotations_onset= lfp_rec_offset.annotations.onset - new_start_intracranial
+        
     external_title = (
-        "SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name[:-4]) + ".set"
+        "SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name.rsplit('.', 1)[0]) + ".set"
         )
 
     if self.dataset_intra.flag_cleaned == True:
+        # get intracranial file title without extension (keep everything before the last .)
+        int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
         lfp_title = (
-            "SYNCHRONIZED_INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name[:-4]) + ".set"
+            "SYNCHRONIZED_INTRACRANIAL_CLEANED_" + str(int_title) + ".set"
             )
     else:
         lfp_title = (
-            "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + ".set"
+            "SYNCHRONIZED_INTRACRANIAL_" + str(int_title) + ".set"
             )
 
     if self.folder_path is not None:
@@ -781,9 +896,7 @@ def save_datasets_as_set(self):
         fname_external_out = external_title
         fname_lfp_out = lfp_title
 
-    TMSi_rec_offset_annotations_onset = TMSi_rec_offset.annotations.onset - new_start_external
-    lfp_rec_offset_annotations_onset= lfp_rec_offset.annotations.onset - new_start_intracranial
-    
+
     lfp_timescale = np.linspace(
         0, self.dataset_intra.synced_data.get_data().shape[1]/lfp_sf, 
         self.dataset_intra.synced_data.get_data().shape[1]
@@ -835,7 +948,7 @@ def synchronize_datasets_as_pickles(self):
     LFP_df_offset["sf_LFP"] = self.dataset_intra.sf
     LFP_df_offset["time_stamp"] = LFP_timescale_offset_s
     lfp_title = (
-        "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + ".pkl"
+        "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name.rsplit('.', 1)[0]) + ".pkl"
         )
     if self.folder_path is not None:
         LFP_filename = join(self.folder_path, lfp_title)
@@ -924,7 +1037,7 @@ def synchronize_datasets_as_pickles(self):
     for df_name, df_data in extracted_streams.items():
         # Generate the filename
         external_title = (
-            f"{df_name}SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name[:-4]) + ".pkl"
+            f"{df_name}SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name.rsplit('.', 1)[0]) + ".pkl"
             )
         # Create the full path to the file
         if self.folder_path is not None:
@@ -1068,7 +1181,7 @@ def synchronize_datasets_as_one_pickle(self):
     
     ## saving as pickle:
     # Generate the filename
-    filename = f"{self.dataset_extra.file_name[:-4]}_synchronized_data.pkl"
+    filename = f"{self.dataset_extra.file_name.rsplit('.', 1)[0]}_synchronized_data.pkl"
     # Create the full path to the file
     if self.folder_path is not None:
         filepath = join(self.folder_path, filename)
@@ -1081,6 +1194,8 @@ def synchronize_datasets_as_one_pickle(self):
         "Synchronization done. Everything saved as one .pickle file"
         )
 
+
+ 
 def synchronize_datasets_as_mat(self):
     """
     This function synchronizes intracranial and external datasets,
@@ -1091,19 +1206,21 @@ def synchronize_datasets_as_mat(self):
     The synchronized datasets are saved in the specified folder.
     If no folder is selected, they are saved in the current working directory.
     """
-    index_start_LFP = (self.dataset_intra.art_start - 1) * self.dataset_intra.sf
-    LFP_array = self.dataset_intra.synced_data.get_data()
-    LFP_cropped = LFP_array[:, int(index_start_LFP) :].T
+    # index_start_LFP = (self.dataset_intra.art_start - 1) * self.dataset_intra.sf
+    # LFP_array = self.dataset_intra.synced_data.get_data()
+    # LFP_cropped = LFP_array[:, int(index_start_LFP) :].T
 
-    ## External ##
-    # Crop beginning of external recordings 1s before first artifact:
-    time_start_external = (self.dataset_extra.art_start) - 1
-    index_start_external = time_start_external * self.dataset_extra.sf
-    external_file = self.dataset_extra.synced_data.get_data()
-    external_cropped = external_file[:, int(index_start_external) :].T
+    # ## External ##
+    # # Crop beginning of external recordings 1s before first artifact:
+    # time_start_external = (self.dataset_extra.art_start) - 1
+    # index_start_external = time_start_external * self.dataset_extra.sf
+    # external_file = self.dataset_extra.synced_data.get_data()
+    # external_cropped = external_file[:, int(index_start_external) :].T
 
     # Check which recording is the longest,
     # crop it to give it the same duration as the other one:
+    LFP_cropped = self.dataset_intra.synced_data.get_data().T
+    external_cropped = self.dataset_extra.synced_data.get_data().T
     LFP_rec_duration = len(LFP_cropped) / self.dataset_intra.sf
     external_rec_duration = len(external_cropped) / self.dataset_extra.sf
 
@@ -1119,17 +1236,27 @@ def synchronize_datasets_as_mat(self):
         LFP_synchronized = LFP_cropped
         external_synchronized = external_cropped  
 
-    # save the synchronized data in mat format          
+    # save the synchronized data in mat format     
+    # create a time vector for both recordings starting at 0s
+    LFP_time_offset = np.linspace(
+        0, len(LFP_synchronized) / self.dataset_intra.sf, len(LFP_synchronized)
+        )    
+    external_time_offset = np.linspace(
+        0, len(external_synchronized) / self.dataset_extra.sf, len(external_synchronized)
+        )
+    # add the time vector as the last column of the dataframes
     LFP_df_offset = pd.DataFrame(LFP_synchronized)
     LFP_df_offset.columns = self.dataset_intra.ch_names
     external_df_offset = pd.DataFrame(external_synchronized)
     external_df_offset.columns = self.dataset_extra.ch_names
-
+    LFP_df_offset["time"] = LFP_time_offset
+    external_df_offset["time"] = external_time_offset
+    
     lfp_title = (
-        "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + ".mat"
+        "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name.rsplit('.', 1)[0]) + ".mat"
         )
     external_title = (
-        f"SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name[:-6]) + ".mat"
+        f"SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name.rsplit('.', 1)[0]) + ".mat"
         )
     
     if self.folder_path is not None:
@@ -1236,9 +1363,16 @@ def save_datasets_as_fif(self):
     The function saves the synchronized datasets in the specified folder.
     If no folder is selected, it saves them in the current working directory.
     """
-    print("events from annotations extraction")
-    events, _ = mne.events_from_annotations(self.dataset_extra.raw_data)
-    inv_dic = {v: str(k) for k, v in _.items()}
+    ANNOTATIONS = False # Default: no annotations
+    print("Checking for annotations...")
+    # check if the recordings have annotations
+    ## if yes, transfer the events from the external to the intracranial recording
+    if hasattr(self.dataset_extra.raw_data, "annotations") and len(self.dataset_extra.raw_data.annotations) > 0:
+        ANNOTATIONS = True
+        print("Annotations found.")
+        print("events from annotations extraction")
+        events, _ = mne.events_from_annotations(self.dataset_extra.raw_data)
+        inv_dic = {v: str(k) for k, v in _.items()}
 
     ## offset intracranial recording (crop everything that is more than 1s before the artifact)
     new_start_intracranial = self.dataset_intra.art_start - 1
@@ -1248,47 +1382,48 @@ def save_datasets_as_fif(self):
     new_start_external = self.dataset_extra.art_start - 1
     TMSi_rec_offset = self.dataset_extra.synced_data
 
-    ## transfer of the events from the external to the intracranial recording
-    # create a duplicate of the events to manipulate it without changing the external one
-    events_lfp = deepcopy(events)
-
-    # get the events from the external in time instead of samples to account 
-    # for the different sampling frequencies
-    events_in_time = events[:,0]/self.dataset_extra.sf
-
-    # then offset the events in time to the new start of the external recording
-    events_in_time_offset = events_in_time - new_start_external
-
     if self.dataset_intra.eff_sf is not None:
         lfp_sf = self.dataset_intra.eff_sf
     else:
         lfp_sf = self.dataset_intra.sf
 
-    # convert the events in time offset to samples corresponding to 
-    # the sampling frequency of the intracranial recording
-    # because the annotations object works with samples, not timings
-    events_in_time_offset_lfp = events_in_time_offset * lfp_sf
-    events_lfp[:,0] = events_in_time_offset_lfp
+    if ANNOTATIONS:
+        ## transfer of the events from the external to the intracranial recording
+        # create a duplicate of the events to manipulate it without changing the external one
+        events_lfp = deepcopy(events)
 
-    ## create an annotation object for the intracranial recording
-    annotations_lfp = mne.annotations_from_events(
-        events_lfp, sfreq=lfp_sf, event_desc=inv_dic
-        )
+        # get the events from the external in time instead of samples to account 
+        # for the different sampling frequencies
+        events_in_time = events[:,0]/self.dataset_extra.sf
 
-    lfp_rec_offset.set_annotations(None) # make sure that no annotations are present
-    lfp_rec_offset.set_annotations(annotations_lfp) # set the new annotations
+        # then offset the events in time to the new start of the external recording
+        events_in_time_offset = events_in_time - new_start_external
+
+        # convert the events in time offset to samples corresponding to 
+        # the sampling frequency of the intracranial recording
+        # because the annotations object works with samples, not timings
+        events_in_time_offset_lfp = events_in_time_offset * lfp_sf
+        events_lfp[:,0] = events_in_time_offset_lfp
+
+        ## create an annotation object for the intracranial recording
+        annotations_lfp = mne.annotations_from_events(
+            events_lfp, sfreq=lfp_sf, event_desc=inv_dic
+            )
+
+        lfp_rec_offset.set_annotations(None) # make sure that no annotations are present
+        lfp_rec_offset.set_annotations(annotations_lfp) # set the new annotations
 
     external_title = (
-        "SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name[:-4]) + "_raw.fif"
+        "SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name.rsplit('.', 1)[0]) + "_raw.fif"
         )
 
     if self.dataset_intra.flag_cleaned == True:
         lfp_title = (
-            "SYNCHRONIZED_INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name[:-4]) + "_raw.fif"
+            "SYNCHRONIZED_INTRACRANIAL_CLEANED_" + str(self.dataset_intra.file_name.rsplit('.', 1)[0]) + "_raw.fif"
             )
     else:
         lfp_title = (
-            "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name[:-4]) + "_raw.fif"
+            "SYNCHRONIZED_INTRACRANIAL_" + str(self.dataset_intra.file_name.rsplit('.', 1)[0]) + "_raw.fif"
             )
 
     if self.folder_path is not None:
@@ -1323,7 +1458,8 @@ def save_datasets_as_fif(self):
     lfp_rec_offset_fixed = mne.io.RawArray(data_lfp, info)
 
     # Reattach annotations and any other metadata
-    lfp_rec_offset_fixed.set_annotations(lfp_rec_offset.annotations)
+    if ANNOTATIONS:
+        lfp_rec_offset_fixed.set_annotations(lfp_rec_offset.annotations)
 
     # Save the corrected Raw
     lfp_rec_offset_fixed.save(fname_lfp_out, overwrite=True)
