@@ -339,6 +339,14 @@ def choose_int_channel_for_cleaning(self):
             self.btn_confirm_and_plot_channels.setEnabled(True)    
             self.box_filtering_option.setEnabled(True)
             self.btn_validate_filtering.setEnabled(True)
+
+            # reset params of manual override to default when changing channel to clean:
+            self.r_peak_polarity_lfp = None
+            self.start_cleaning_time = None
+            self.end_cleaning_time = None
+            self.exclusion_periods = None
+            self.detection_threshold = 95  # reset to default
+
                 
     except Exception as e:
         QMessageBox.critical(self, "Error", f"Failed to select channel: {e}")

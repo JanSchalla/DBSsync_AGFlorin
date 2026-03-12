@@ -70,7 +70,8 @@ def manual_override(self):
     polarity_label = QLabel("R-peak polarity (LFP):")
     combo_polarity = QComboBox()
     combo_polarity.addItems(["None", "Down", "Up"])
-    combo_polarity.setCurrentText("None")
+    # combo_polarity.setCurrentText("None")
+    combo_polarity.setCurrentText(self.r_peak_polarity_lfp)
     polarity_layout.addWidget(polarity_label)
     polarity_layout.addWidget(combo_polarity)
     layout.addLayout(polarity_layout)
@@ -79,14 +80,16 @@ def manual_override(self):
     start_layout = QHBoxLayout()
     start_label = QLabel("Start cleaning time (s):")
     start_edit = QLineEdit()
-    start_edit.setPlaceholderText("None")
+    # start_edit.setPlaceholderText("None")
+    start_edit.setText(str(self.start_cleaning_time))
     start_layout.addWidget(start_label)
     start_layout.addWidget(start_edit)
     layout.addLayout(start_layout)
     end_layout = QHBoxLayout()
     end_label = QLabel("End cleaning time (s):")
     end_edit = QLineEdit()
-    end_edit.setPlaceholderText("None")
+    # end_edit.setPlaceholderText("None")
+    end_edit.setText(str(self.end_cleaning_time))
     end_layout.addWidget(end_label)
     end_layout.addWidget(end_edit)
     layout.addLayout(end_layout)
@@ -95,7 +98,8 @@ def manual_override(self):
     exclusion_layout = QHBoxLayout()
     exclusion_label = QLabel("Exclusion period (s) as tuples:")
     exclusion_edit = QLineEdit()
-    exclusion_edit.setPlaceholderText("None")
+    # exclusion_edit.setPlaceholderText("None")
+    exclusion_edit.setText(str(self.exclusion_periods))
     exclusion_layout.addWidget(exclusion_label)
     exclusion_layout.addWidget(exclusion_edit)
     layout.addLayout(exclusion_layout)
@@ -105,7 +109,7 @@ def manual_override(self):
     threshold_label = QLabel("R-peak detection threshold (%):")
     combo_r_peak_threshold = QComboBox()
     combo_r_peak_threshold.addItems(["95", "96", "97", "98", "99"])
-    combo_r_peak_threshold.setCurrentText("95")  # Set default value   
+    combo_r_peak_threshold.setCurrentText(str(self.detection_threshold))
     threshold_layout.addWidget(threshold_label)
     threshold_layout.addWidget(combo_r_peak_threshold) 
     layout.addLayout(threshold_layout)
@@ -128,12 +132,18 @@ def manual_override(self):
                 r_peak_polarity_lfp = None
 
             start_text = start_edit.text().strip()
-            start_cleaning_time = float(start_text) if start_text else None
+            if start_text == "None":
+                start_text = None
+            start_cleaning_time = (float(start_text) if start_text is not None else None)
 
             end_text = end_edit.text().strip()
-            end_cleaning_time = float(end_text) if end_text else None
+            if end_text == "None":
+                end_text = None
+            end_cleaning_time = (float(end_text) if end_text is not None else None)
 
             exclusion_text = exclusion_edit.text().strip()
+            if exclusion_text == "None":
+                exclusion_text = None
             if exclusion_text:
                 try:
                     exclusion_periods = ast.literal_eval(exclusion_text)
@@ -255,12 +265,12 @@ def find_r_peaks(self):
         self.btn_start_ecg_cleaning_template_sub.setEnabled(True)
         self.btn_start_ecg_cleaning_svd.setEnabled(True)
 
-        # reset params to default after use to be able to process left and right channels differently
-        self.r_peak_polarity_lfp = None
-        self.start_cleaning_time = None
-        self.end_cleaning_time = None
-        self.exclusion_periods = None
-        self.detection_threshold = 95  # reset to default
+        # # reset params to default after use to be able to process left and right channels differently
+        # self.r_peak_polarity_lfp = None
+        # self.start_cleaning_time = None
+        # self.end_cleaning_time = None
+        # self.exclusion_periods = None
+        # self.detection_threshold = 95  # reset to default
 
 
 def find_r_peaks_based_on_ext_ecg(
