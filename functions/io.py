@@ -653,11 +653,11 @@ def save_datasets(self):
         else:
             if saving_format_external == ".mat" and saving_format_internal == ".mat":
                     synchronize_datasets_as_mat(self)
-            if saving_format_external == ".fif" and saving_format_internal == ".fif":
+            elif saving_format_external == ".fif" and saving_format_internal == ".fif":
                     save_datasets_as_fif(self)
             # if saving_format_external == ".pkl" and saving_format_internal == ".pkl":
             #         synchronize_datasets_as_pickles(self)
-            if saving_format_external == ".set" and saving_format_internal == ".set":
+            elif saving_format_external == ".set" and saving_format_internal == ".set":
                     save_datasets_as_set(self)
             else:
                 QMessageBox.warning(
