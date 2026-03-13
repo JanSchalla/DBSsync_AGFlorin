@@ -398,6 +398,8 @@ def validate_filtering(self):
 
                 # Add channels to existing Raw object
                 self.dataset_intra.raw_data.add_channels([raw_new_left, raw_new_right])
+                # keep track that raw channels have been added at the end of the raw data:
+                self.dataset_intra.filtered_channels = True
 
                 h_freq = float(self.box_filtering_option.text())
                 self.dataset_intra.raw_data.filter(
@@ -409,7 +411,7 @@ def validate_filtering(self):
                     self, "Filtering", 
                     f"Filtering applied to both left and right channels with cutoff frequency: {h_freq} Hz"
                     )
-                
+            
             else:
                 # Extract the original channel before you overwrite it
                 raw_new_left = self.dataset_intra.synced_data.copy().pick_channels(
@@ -427,6 +429,8 @@ def validate_filtering(self):
 
                 # Add channels to existing Raw object
                 self.dataset_intra.synced_data.add_channels([raw_new_left, raw_new_right])
+                # keep track that raw channels have been added at the end of the raw data:
+                self.dataset_intra.filtered_channels = True
 
                 h_freq = float(self.box_filtering_option.text())
                 self.dataset_intra.synced_data.filter(

@@ -1259,7 +1259,9 @@ def synchronize_datasets_as_mat(self):
     
     # add the time vector as the last column of the dataframes
     LFP_df_offset = pd.DataFrame(LFP_synchronized)
-    LFP_df_offset.columns = self.dataset_intra.ch_names
+    print("LFP_df_offset.shape:", LFP_df_offset.shape)
+    ch_names = self.dataset_intra.synced_data.ch_names 
+    LFP_df_offset.columns = ch_names
     external_df_offset = pd.DataFrame(external_synchronized)
     external_df_offset.columns = self.dataset_extra.ch_names
     LFP_df_offset["time"] = LFP_time_offset
