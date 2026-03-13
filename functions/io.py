@@ -688,10 +688,12 @@ def save_int_as_set(self):
     else:
         fname_lfp_out = lfp_title
     
-    lfp_timescale = np.linspace(
-        0, self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-        self.dataset_intra.raw_data.get_data().shape[1]
-        )
+    # lfp_timescale = np.linspace(
+    #     0, self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+    #     self.dataset_intra.raw_data.get_data().shape[1]
+    #     )
+    end_time = self.dataset_intra.raw_data.get_data().shape[1] / self.dataset_intra.sf
+    lfp_timescale = np.arange(0, end_time, 1/self.dataset_intra.sf)
     
     write_set(
         fname = fname_lfp_out, 
@@ -901,10 +903,12 @@ def save_datasets_as_set(self):
         fname_lfp_out = lfp_title
 
 
-    lfp_timescale = np.linspace(
-        0, self.dataset_intra.synced_data.get_data().shape[1]/lfp_sf, 
-        self.dataset_intra.synced_data.get_data().shape[1]
-        )
+    # lfp_timescale = np.linspace(
+    #     0, self.dataset_intra.synced_data.get_data().shape[1]/lfp_sf, 
+    #     self.dataset_intra.synced_data.get_data().shape[1]
+    #     )
+    end_time = self.dataset_intra.synced_data.get_data().shape[1] / lfp_sf
+    lfp_timescale = np.arange(0, end_time, 1/lfp_sf)
     
     write_set(
         fname = fname_external_out, 
@@ -1242,12 +1246,17 @@ def synchronize_datasets_as_mat(self):
 
     # save the synchronized data in mat format     
     # create a time vector for both recordings starting at 0s
-    LFP_time_offset = np.linspace(
-        0, len(LFP_synchronized) / self.dataset_intra.sf, len(LFP_synchronized)
-        )    
-    external_time_offset = np.linspace(
-        0, len(external_synchronized) / self.dataset_extra.sf, len(external_synchronized)
-        )
+    # LFP_time_offset = np.linspace(
+    #     0, len(LFP_synchronized) / self.dataset_intra.sf, len(LFP_synchronized)
+    #     )    
+    end_time_LFP = len(LFP_synchronized) / self.dataset_intra.sf
+    LFP_time_offset = np.arange(0, end_time_LFP, 1/self.dataset_intra.sf)
+    # external_time_offset = np.linspace(
+    #     0, len(external_synchronized) / self.dataset_extra.sf, len(external_synchronized)
+    #     )
+    end_time_external = len(external_synchronized) / self.dataset_extra.sf
+    external_time_offset = np.arange(0, end_time_external, 1/self.dataset_extra.sf)
+    
     # add the time vector as the last column of the dataframes
     LFP_df_offset = pd.DataFrame(LFP_synchronized)
     LFP_df_offset.columns = self.dataset_intra.ch_names

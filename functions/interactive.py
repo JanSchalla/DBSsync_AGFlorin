@@ -103,7 +103,7 @@ def select_channel_extra(self):
                 channel_data = self.dataset_extra.raw_data.get_data()[
                     self.dataset_extra.selected_channel_index
                     ]
-                b, a = scipy.signal.butter(1, 0.05, "highpass")
+                b, a = scipy.signal.butter(1, 0.1, "highpass", fs=self.dataset_extra.sf)
                 detrended_data = scipy.signal.filtfilt(b, a, channel_data)
                 self.dataset_extra.min_y_value = detrended_data.min()
                 self.dataset_extra.max_y_value = detrended_data.max()
@@ -156,7 +156,7 @@ def select_ecg_channel_to_compute_hr_external(self):
                     self.dataset_extra.ecg_selected_channel_index
                     ]
                 # Apply 0.1 Hz-100Hz band-pass filter to ECG data
-                b, a = scipy.signal.butter(1, 0.05, "highpass")
+                b, a = scipy.signal.butter(1, 0.1, "highpass", fs=self.dataset_extra.sf)
                 detrended_data = scipy.signal.filtfilt(b, a, channel_data)
                 low_cutoff = 100.0  # Hz
                 b2, a2 = scipy.signal.butter(

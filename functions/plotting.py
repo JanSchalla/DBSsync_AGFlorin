@@ -247,11 +247,13 @@ def plot_overlapped_channels_ecg(self):
             fs=self.dataset_extra.sf 
         )
         ecg_data = scipy.signal.filtfilt(b2, a2, detrended_data)
-        timescale_extra = np.linspace(
-            0, 
-            self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf, 
-            self.dataset_extra.synced_data.get_data().shape[1]
-            )
+        # timescale_extra = np.linspace(
+        #     0, 
+        #     self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf, 
+        #     self.dataset_extra.synced_data.get_data().shape[1]
+        #     )
+        end_time = self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf
+        timescale_extra = np.arange(0, end_time, 1/self.dataset_extra.sf)
 
         self.ax_overlapped.plot(
              timescale_extra, ecg_data, color='#90EE90', 
@@ -263,11 +265,12 @@ def plot_overlapped_channels_ecg(self):
         data_intra = self.dataset_intra.raw_data.get_data()[
          self.dataset_intra.selected_channel_index_ecg
          ]
-        timescale_intra = np.linspace(
-            0, 
-            self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.raw_data.get_data().shape[1]
-            )
+        # timescale_intra = np.linspace(
+        #     0, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]
+        #     )
+        timescale_intra = self.dataset_intra.times
         self.ax_overlapped.plot(
             timescale_intra, data_intra, color='#6495ED', 
             label='Intracranial channel to clean'
@@ -281,11 +284,13 @@ def plot_overlapped_channels_ecg(self):
         data_intra = self.dataset_intra.synced_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        timescale_intra = np.linspace(
-            0, 
-            self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.synced_data.get_data().shape[1]
-            )
+        # timescale_intra = np.linspace(
+        #     0, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]
+        #     )
+        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
+        timescale_intra = np.arange(0, end_time, 1/self.dataset_intra.sf)
         self.ax_overlapped.plot(
             timescale_intra, data_intra, color='#6495ED', 
             label='Intracranial channel to clean'
@@ -305,11 +310,13 @@ def plot_scatter_channel_intra_sf(self):
     data = self.dataset_intra.raw_data.get_data()[
          self.dataset_intra.selected_channel_index
          ]
-    timescale = np.linspace(
-         0, 
-         self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-         self.dataset_intra.raw_data.get_data().shape[1]
-         )
+    # timescale = np.linspace(
+    #      0, 
+    #      self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+    #      self.dataset_intra.raw_data.get_data().shape[1]
+    #      )
+    end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+    timescale = np.arange(0, end_time, 1/self.dataset_intra.sf)
     self.ax_intra_sf.scatter(timescale, data, s=8)
     self.canvas_intra_sf.draw()
 

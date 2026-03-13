@@ -199,20 +199,24 @@ def find_r_peaks(self):
         full_data = self.dataset_intra.raw_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        times = np.linspace(
-            0, 
-            self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.raw_data.get_data().shape[1]
-            )
+        # times = np.linspace(
+        #     0, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]
+        #     )
+        end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
     else:    
         full_data = self.dataset_intra.synced_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        times = np.linspace(
-            0, 
-            self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.synced_data.get_data().shape[1]
-            )
+        # times = np.linspace(
+        #     0, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]
+        #     )
+        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
+        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
 
     if self.dataset_extra.selected_channel_name_ecg is not None:
     # an external ECG channel was selected and will therefore be used for R-peak detection
@@ -323,11 +327,13 @@ def find_r_peaks_based_on_ext_ecg(
         fs=self.dataset_extra.sf 
     )
     ecg_data = scipy.signal.filtfilt(b2, a2, detrended_data)
-    timescale_extra = np.linspace(
-        0, 
-        self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf, 
-        self.dataset_extra.synced_data.get_data().shape[1]
-        )
+    # timescale_extra = np.linspace(
+    #     0, 
+    #     self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf, 
+    #     self.dataset_extra.synced_data.get_data().shape[1]
+    #     )
+    end_time_extra = self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf
+    timescale_extra = np.arange(0, end_time_extra, 1/self.dataset_extra.sf)
 
     # Z-score the ECG signal
     ecg_z = (ecg_data - np.mean(ecg_data)) / np.std(ecg_data)
@@ -512,7 +518,8 @@ def find_r_peaks_based_on_ext_ecg(
     pre_samples = int(abs(window_artifact[0]) * sf_lfp)
     post_samples = int(window_artifact[1] * sf_lfp)
     epoch_length = pre_samples + post_samples  # Total length of each epoch
-    time = np.linspace(window_artifact[0], window_artifact[1], epoch_length)  # Time in seconds
+    # time = np.linspace(window_artifact[0], window_artifact[1], epoch_length)  # Time in seconds
+    time = np.arange(-pre_samples, post_samples) / sf_lfp  # Time in seconds
 
     epochs = []  # Store extracted heartbeats
 
@@ -877,20 +884,24 @@ def clean_ecg_interpolation(self):
         full_data = self.dataset_intra.raw_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        times = np.linspace(
-            0, 
-            self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.raw_data.get_data().shape[1]
-            )        
+        # times = np.linspace(
+        #     0, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]
+        #     )   
+        end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+        times = np.arange(0, end_time, 1/self.dataset_intra.sf)     
     else:
         full_data = self.dataset_intra.synced_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        times = np.linspace(
-            0, 
-            self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.synced_data.get_data().shape[1]
-            )
+        # times = np.linspace(
+        #     0, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]
+        #     )
+        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
+        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
 
     ############################################################################
     # prepare a copy of the full data to store the cleaned data
@@ -978,20 +989,24 @@ def clean_ecg_template_sub(self):
         full_data = self.dataset_intra.raw_data.get_data()[
         self.dataset_intra.selected_channel_index_ecg
         ]
-        times = np.linspace(
-            0, 
-            self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.raw_data.get_data().shape[1]
-            )        
+        # times = np.linspace(
+        #     0, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.raw_data.get_data().shape[1]
+        #     )    
+        end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+        times = np.arange(0, end_time, 1/self.dataset_intra.sf)    
     else:
         full_data = self.dataset_intra.synced_data.get_data()[
         self.dataset_intra.selected_channel_index_ecg
         ]
-        times = np.linspace(
-            0, 
-            self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-            self.dataset_intra.synced_data.get_data().shape[1]
-            )
+        # times = np.linspace(
+        #     0, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
+        #     self.dataset_intra.synced_data.get_data().shape[1]
+        #     )
+        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
+        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
     window = [-0.2, 0.2] # QRS complex window
 
     ############################################################################
@@ -1002,9 +1017,10 @@ def clean_ecg_template_sub(self):
     pre_samples = int(abs(window[0]) * self.dataset_intra.sf)
     post_samples = int(window[1] * self.dataset_intra.sf)
     epoch_length = pre_samples + post_samples  # Total length of each epoch
-    timescale_epoch = np.linspace(
-        window[0], window[1], epoch_length
-        )  # Time in seconds
+    # timescale_epoch = np.linspace(
+    #     window[0], window[1], epoch_length
+    #     )  # Time in seconds
+    timescale_epoch = np.arange(-pre_samples, post_samples) / self.dataset_intra.sf  # Time in seconds
 
     epochs = []  # Store extracted heartbeats        
 

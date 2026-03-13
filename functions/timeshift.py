@@ -184,7 +184,7 @@ def select_first_artifact_extra_eff_sf_correction(self):
         self.plus_symbol_extra_first, = self.ax_extra_sf.plot(
             [], [], "k+", markersize=10
             )
-    b, a = scipy.signal.butter(1, 0.05, "highpass")
+        b, a = scipy.signal.butter(1, 0.1, "highpass", fs=self.dataset_extra.sf)
     data = scipy.signal.filtfilt(
         b, a, self.dataset_extra.raw_data.get_data()[
             self.dataset_extra.selected_channel_index
@@ -248,7 +248,7 @@ def select_last_artifact_extra_eff_sf_correction(self):
         self.plus_symbol_extra_last, = self.ax_extra_sf.plot(
             [], [], "r+", markersize=10
             )
-    b, a = scipy.signal.butter(1, 0.05, "highpass")
+        b, a = scipy.signal.butter(1, 0.1, "highpass", fs=self.dataset_extra.sf)
     data = scipy.signal.filtfilt(
         b, a, self.dataset_extra.raw_data.get_data()[
             self.dataset_extra.selected_channel_index
@@ -298,11 +298,13 @@ def compute_eff_sf(self):
     sample_interval = self.dataset_intra.last_art_start_idx - self.dataset_intra.first_art_start_idx
     self.dataset_intra.eff_sf = sample_interval/time_interval
     self.dataset_intra.sf = self.dataset_intra.eff_sf
-    self.dataset_intra.times = np.linspace(
-        0, 
-        self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-        self.dataset_intra.raw_data.get_data().shape[1]
-        )
+    # self.dataset_intra.times = np.linspace(
+    #     0, 
+    #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
+    #     self.dataset_intra.raw_data.get_data().shape[1]
+    #     )
+    end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+    self.dataset_intra.times = np.arange(0, end_time, 1/self.dataset_intra.sf)
     self.label_eff_sf.setText(
         f"The effective sampling frequency of the intracranial recording is actually {self.dataset_intra.eff_sf} and will be used for synchronization.")
 

@@ -108,7 +108,7 @@ def manual_selection_external(self):
     data = self.dataset_extra.raw_data.get_data()[
         self.dataset_extra.selected_channel_index
         ]
-    b, a = scipy.signal.butter(1, 0.05, "highpass")
+    b, a = scipy.signal.butter(1, 0.1, "highpass", fs=self.dataset_extra.sf)
     channel_data_to_plot = scipy.signal.filtfilt(b, a, data)
     timescale = self.dataset_extra.times
 
@@ -184,6 +184,7 @@ def manual_selection_intra(self):
         self.dataset_intra.selected_channel_index
         ]
     timescale = self.dataset_intra.times
+    print("Timescale:", timescale[0:10])  # Print the first 10 values of the timescale for debugging
     pos = []
 
     self.ax_intra.scatter(timescale, data, s=8)
