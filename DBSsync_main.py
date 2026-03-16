@@ -728,7 +728,7 @@ class SyncGUI(QMainWindow):
         self.btn_start_ecg_cleaning_svd.clicked.connect(partial(start_ecg_cleaning_svd, self))
         self.btn_start_ecg_cleaning_svd.setEnabled(False)  # Should be enabled only when R-peaks have been detected
 
-        layout_methods.addWidget(self.btn_start_ecg_cleaning_interpolation)
+        # layout_methods.addWidget(self.btn_start_ecg_cleaning_interpolation)
         layout_methods.addWidget(self.btn_start_ecg_cleaning_template_sub)
         layout_methods.addWidget(self.btn_start_ecg_cleaning_svd)
 
