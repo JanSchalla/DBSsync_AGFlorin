@@ -883,10 +883,9 @@ def save_datasets_as_set(self):
     external_title = (
         "SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name.rsplit('.', 1)[0]) + ".set"
         )
-
+    int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
     if self.dataset_intra.flag_cleaned == True:
-        # get intracranial file title without extension (keep everything before the last .)
-        int_title = self.dataset_intra.file_name.rsplit('.', 1)[0]
+        # get intracranial file title without extension (keep everything before the last .)    
         lfp_title = (
             "SYNCHRONIZED_INTRACRANIAL_CLEANED_" + str(int_title) + ".set"
             )
