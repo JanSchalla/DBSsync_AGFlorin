@@ -141,6 +141,7 @@ def load_json_file(self, file_name: str):
         stream_count = 1
 
         for i_stream, dat in enumerate(list_of_streamings):
+            print(f"Stream {i_stream} keys: {dat.keys()}")  # DEBUG
             first_packet_time = dat['FirstPacketDateTime']
 
             if first_packet_time != stream_times[-1] or i_stream == 0:
@@ -208,7 +209,11 @@ def load_json_file(self, file_name: str):
                 if time_since_last_rec_first_packet is None:
                     time_since_last_rec_first_packet = functions.utils.format_timedelta(time_since_last_rec)
                 if time_since_last_rec_ticks is None:
-                    time_since_last_rec_ticks = functions.utils.format_timedelta(timedelta(milliseconds=(ticks_in_ms[0] - (streamings_dict[prev_streaming_id][channel]['TicksInMses'][-1])) )) if ends and streaming_id != prev_streaming_id else '0 days, 0h, 0min, 0s, 0ms'
+                    if streaming_id != 'streaming_1':  # for the first streaming, we don't have a previous streaming to compare to
+                        channel_previous = list(streamings_dict[prev_streaming_id].keys())[0]
+                    else:
+                        channel_previous = channel    
+                    time_since_last_rec_ticks = functions.utils.format_timedelta(timedelta(milliseconds=(ticks_in_ms[0] - (streamings_dict[prev_streaming_id][channel_previous]['TicksInMses'][-1])) )) if ends and streaming_id != prev_streaming_id else '0 days, 0h, 0min, 0s, 0ms'
                 prev_streaming_id = streaming_id
                 # convert time_since_last_rec in milliseconds
                 #time_since_last_rec_ticks_ms = functions.utils.time_to_ms(time_since_last_rec_ticks)
