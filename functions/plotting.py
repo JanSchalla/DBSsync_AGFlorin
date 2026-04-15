@@ -236,21 +236,19 @@ def plot_overlapped_channels_ecg(self):
             data_intra = self.dataset_intra.raw_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-            end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
-
 
         else:
             data_intra = self.dataset_intra.synced_data.get_data()[
                 self.dataset_intra.selected_channel_index_ecg
                 ]
-            end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
-    
-        timescale_intra = np.arange(0, end_time, 1/self.dataset_intra.sf)
-        # correct for sample number mismatch:
-        if len(timescale_intra) != len(data_intra):
-            print(f"Length mismatch between timescale_intra and data_intra: {len(timescale_intra)} vs {len(data_intra)}. Correcting for it.")
-            length = len(data_intra)
-            timescale_intra = timescale_intra[:length]
+            
+        nb_points = len(data_intra)
+        timescale_intra = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
+        # # correct for sample number mismatch:
+        # if len(timescale_intra) != len(data_intra):
+        #     print(f"Length mismatch between timescale_intra and data_intra: {len(timescale_intra)} vs {len(data_intra)}. Correcting for it.")
+        #     length = len(data_intra)
+        #     timescale_intra = timescale_intra[:length]
 
         self.ax_overlapped.plot(
             timescale_intra, data_intra, color='#6495ED', 
@@ -274,14 +272,16 @@ def plot_overlapped_channels_ecg(self):
             fs=self.dataset_extra.sf 
         )
         ecg_data = scipy.signal.filtfilt(b2, a2, detrended_data)
-        end_time = self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf
-        timescale_extra = np.arange(0, end_time, 1/self.dataset_extra.sf)
+        # end_time = self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf
+        # timescale_extra = np.arange(0, end_time, 1/self.dataset_extra.sf)
+        nb_points_extra = len(ecg_data)
+        timescale_extra = np.arange(nb_points_extra) * (1.0 / self.dataset_extra.sf)
 
-        # correct for sample number mismatch:
-        if len(timescale_extra) != len(ecg_data):
-            print(f"Length mismatch between timescale_extra and data_extra: {len(timescale_extra)} vs {len(ecg_data)}. Correcting for it.")
-            length = len(ecg_data)
-            timescale_extra = timescale_extra[:length]        
+        # # correct for sample number mismatch:
+        # if len(timescale_extra) != len(ecg_data):
+        #     print(f"Length mismatch between timescale_extra and data_extra: {len(timescale_extra)} vs {len(ecg_data)}. Correcting for it.")
+        #     length = len(ecg_data)
+        #     timescale_extra = timescale_extra[:length]        
 
         if self.dataset_intra.selected_channel_index_ecg is not None:
             # scale the ECG data to match the amplitude of the LFP channel for better visualization
@@ -316,8 +316,10 @@ def plot_scatter_channel_intra_sf(self):
     #      self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
     #      self.dataset_intra.raw_data.get_data().shape[1]
     #      )
-    end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
-    timescale = np.arange(0, end_time, 1/self.dataset_intra.sf)
+    # end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+    # timescale = np.arange(0, end_time, 1/self.dataset_intra.sf)
+    nb_points = len(data)
+    timescale = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
     self.ax_intra_sf.scatter(timescale, data, s=8)
     self.canvas_intra_sf.draw()
 

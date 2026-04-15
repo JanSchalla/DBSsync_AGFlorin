@@ -184,7 +184,6 @@ def manual_selection_intra(self):
         self.dataset_intra.selected_channel_index
         ]
     timescale = self.dataset_intra.times
-    print("Timescale:", timescale[0:10])  # Print the first 10 values of the timescale for debugging
     pos = []
 
     self.ax_intra.scatter(timescale, data, s=8)

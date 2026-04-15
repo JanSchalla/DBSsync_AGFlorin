@@ -199,24 +199,14 @@ def find_r_peaks(self):
         full_data = self.dataset_intra.raw_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        # times = np.linspace(
-        #     0, 
-        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     self.dataset_intra.raw_data.get_data().shape[1]
-        #     )
-        end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
-        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
+
     else:    
         full_data = self.dataset_intra.synced_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        # times = np.linspace(
-        #     0, 
-        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     self.dataset_intra.synced_data.get_data().shape[1]
-        #     )
-        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
-        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
+
+    nb_points = len(full_data)
+    times = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
 
     if self.dataset_extra.selected_channel_name_ecg is not None:
     # an external ECG channel was selected and will therefore be used for R-peak detection
@@ -269,12 +259,6 @@ def find_r_peaks(self):
         self.btn_start_ecg_cleaning_template_sub.setEnabled(True)
         self.btn_start_ecg_cleaning_svd.setEnabled(True)
 
-        # # reset params to default after use to be able to process left and right channels differently
-        # self.r_peak_polarity_lfp = None
-        # self.start_cleaning_time = None
-        # self.end_cleaning_time = None
-        # self.exclusion_periods = None
-        # self.detection_threshold = 95  # reset to default
 
 
 def find_r_peaks_based_on_ext_ecg(
@@ -328,13 +312,15 @@ def find_r_peaks_based_on_ext_ecg(
         fs=self.dataset_extra.sf 
     )
     ecg_data = scipy.signal.filtfilt(b2, a2, detrended_data)
+    nb_points = len(ecg_data)
+    timescale_extra = np.arange(nb_points) * (1.0 / self.dataset_extra.sf)
     # timescale_extra = np.linspace(
     #     0, 
     #     self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf, 
     #     self.dataset_extra.synced_data.get_data().shape[1]
     #     )
-    end_time_extra = self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf
-    timescale_extra = np.arange(0, end_time_extra, 1/self.dataset_extra.sf)
+    # end_time_extra = self.dataset_extra.synced_data.get_data().shape[1]/self.dataset_extra.sf
+    # timescale_extra = np.arange(0, end_time_extra, 1/self.dataset_extra.sf)
 
     # Z-score the ECG signal
     ecg_z = (ecg_data - np.mean(ecg_data)) / np.std(ecg_data)
@@ -527,7 +513,7 @@ def find_r_peaks_based_on_ext_ecg(
     post_samples = int(window_artifact[1] * sf_lfp)
     epoch_length = pre_samples + post_samples  # Total length of each epoch
     # time = np.linspace(window_artifact[0], window_artifact[1], epoch_length)  # Time in seconds
-    time = np.arange(-pre_samples, post_samples) / sf_lfp  # Time in seconds
+    time_epoch = np.arange(-pre_samples, post_samples) / sf_lfp  # Time in seconds
 
     epochs = []  # Store extracted heartbeats
 
@@ -577,10 +563,10 @@ def find_r_peaks_based_on_ext_ecg(
     self.ax_ecg_artifact.set_title("Detected ECG epochs")
 
     for epoch in epochs:
-        self.ax_ecg_artifact.plot(time, epoch, color='gray', alpha=0.3)
+        self.ax_ecg_artifact.plot(time_epoch, epoch, color='gray', alpha=0.3)
 
     self.ax_ecg_artifact.plot(
-        time, 
+        time_epoch, 
         mean_epoch, 
         color='black', 
         linewidth=2, 
@@ -892,24 +878,14 @@ def clean_ecg_interpolation(self):
         full_data = self.dataset_intra.raw_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        # times = np.linspace(
-        #     0, 
-        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     self.dataset_intra.raw_data.get_data().shape[1]
-        #     )   
-        end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
-        times = np.arange(0, end_time, 1/self.dataset_intra.sf)     
+ 
     else:
         full_data = self.dataset_intra.synced_data.get_data()[
             self.dataset_intra.selected_channel_index_ecg
             ]
-        # times = np.linspace(
-        #     0, 
-        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     self.dataset_intra.synced_data.get_data().shape[1]
-        #     )
-        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
-        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
+
+    nb_points = len(full_data)
+    times = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
 
     ############################################################################
     # prepare a copy of the full data to store the cleaned data
@@ -997,24 +973,14 @@ def clean_ecg_template_sub(self):
         full_data = self.dataset_intra.raw_data.get_data()[
         self.dataset_intra.selected_channel_index_ecg
         ]
-        # times = np.linspace(
-        #     0, 
-        #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     self.dataset_intra.raw_data.get_data().shape[1]
-        #     )    
-        end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
-        times = np.arange(0, end_time, 1/self.dataset_intra.sf)    
+ 
     else:
         full_data = self.dataset_intra.synced_data.get_data()[
         self.dataset_intra.selected_channel_index_ecg
         ]
-        # times = np.linspace(
-        #     0, 
-        #     self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     self.dataset_intra.synced_data.get_data().shape[1]
-        #     )
-        end_time = self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf
-        times = np.arange(0, end_time, 1/self.dataset_intra.sf)
+
+    nb_points = len(full_data)
+    times = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
     window = [-0.2, 0.2] # QRS complex window
 
     ############################################################################

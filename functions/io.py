@@ -78,12 +78,9 @@ def load_mat_file(self, file_name):
         self.dataset_intra.raw_data = raw_data  # Assign to dataset
         self.dataset_intra.sf = raw_data.info["sfreq"]  # Assign sampling frequency
         self.dataset_intra.ch_names = raw_data.ch_names  # Assign channel names#
-        end_time = raw_data.get_data().shape[1] / self.dataset_intra.sf
-        self.dataset_intra.times = np.arange(0, end_time, 1/self.dataset_intra.sf)
-        # self.dataset_intra.times = np.linspace(
-        #     0, raw_data.get_data().shape[1]/self.dataset_intra.sf, 
-        #     raw_data.get_data().shape[1]
-        #     )
+        nb_points = len(raw_data.get_data()[0])
+        self.dataset_intra.times = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
+
         self.file_label_intra.setText(
             f"Selected File: {basename(file_name)}"
             )
@@ -264,7 +261,8 @@ def load_json_file(self, file_name: str):
                 left_mA = j['BrainSenseLfp'][i]['LfpData'][k]['Left']['mA']
                 right_stim.append(right_mA)
                 left_stim.append(left_mA)        
-            stim_time = np.arange(len(right_stim)) / stim_sf      # e.g. every 0.5 s
+            nb_points_stim = len(right_stim)
+            stim_time = np.arange(nb_points_stim) * (1.0 / stim_sf)      # e.g. every 0.5 s          
             lfp_time  = np.arange(int(len(right_stim) * (250 / stim_sf))) / 250  # upsampled time
 
             # resample stim data to match lfp data length
@@ -391,13 +389,8 @@ def load_json_file(self, file_name: str):
         # Store related info
         self.dataset_intra.sf = self.dataset_intra.raw_data.info['sfreq']
         self.dataset_intra.ch_names = self.dataset_intra.raw_data.ch_names
-        end_time = self.dataset_intra.raw_data.n_times / self.dataset_intra.sf
-        self.dataset_intra.times = np.arange(0, end_time, 1/self.dataset_intra.sf)
-        # self.dataset_intra.times = np.linspace(
-        #     0,
-        #     self.dataset_intra.raw_data.n_times / self.dataset_intra.sf,
-        #     self.dataset_intra.raw_data.n_times
-        # )
+        nb_points = len(self.dataset_intra.raw_data.get_data()[0])
+        self.dataset_intra.times = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
         self.dataset_intra.file_name = basename(file_name)
         self.dataset_intra.file_path = dirname(file_name)    
 
@@ -699,7 +692,9 @@ def save_int_as_set(self):
     #     self.dataset_intra.raw_data.get_data().shape[1]
     #     )
     end_time = self.dataset_intra.raw_data.get_data().shape[1] / self.dataset_intra.sf
-    lfp_timescale = np.arange(0, end_time, 1/self.dataset_intra.sf)
+    nb_points = len(self.dataset_intra.raw_data.get_data()[0])
+    lfp_timescale = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
+    # lfp_timescale = np.arange(0, end_time, 1/self.dataset_intra.sf)
     
     write_set(
         fname = fname_lfp_out, 
@@ -727,7 +722,7 @@ def save_int_as_fif(self):
             )
 
     if self.folder_path is not None:
-        fname_lfp_out =join(self.folder_path, lfp_title)
+        fname_lfp_out = join(self.folder_path, lfp_title)
     else:
         fname_lfp_out = lfp_title
     
@@ -884,7 +879,7 @@ def save_datasets_as_set(self):
         lfp_rec_offset.set_annotations(annotations_lfp) # set the new annotations
 
         TMSi_rec_offset_annotations_onset = TMSi_rec_offset.annotations.onset - new_start_external
-        lfp_rec_offset_annotations_onset= lfp_rec_offset.annotations.onset - new_start_intracranial
+        lfp_rec_offset_annotations_onset = lfp_rec_offset.annotations.onset - new_start_intracranial
         
     external_title = (
         "SYNCHRONIZED_EXTERNAL_" + str(self.dataset_extra.file_name.rsplit('.', 1)[0]) + ".set"
@@ -912,8 +907,10 @@ def save_datasets_as_set(self):
     #     0, self.dataset_intra.synced_data.get_data().shape[1]/lfp_sf, 
     #     self.dataset_intra.synced_data.get_data().shape[1]
     #     )
-    end_time = self.dataset_intra.synced_data.get_data().shape[1] / lfp_sf
-    lfp_timescale = np.arange(0, end_time, 1/lfp_sf)
+    # end_time = self.dataset_intra.synced_data.get_data().shape[1] / lfp_sf
+    # lfp_timescale = np.arange(0, end_time, 1/lfp_sf)
+    nb_points = len(self.dataset_intra.synced_data.get_data()[0])
+    lfp_timescale = np.arange(nb_points) * (1.0 / lfp_sf)
     
     write_set(
         fname = fname_external_out, 
@@ -1254,13 +1251,17 @@ def synchronize_datasets_as_mat(self):
     # LFP_time_offset = np.linspace(
     #     0, len(LFP_synchronized) / self.dataset_intra.sf, len(LFP_synchronized)
     #     )    
-    end_time_LFP = len(LFP_synchronized) / self.dataset_intra.sf
-    LFP_time_offset = np.arange(0, end_time_LFP, 1/self.dataset_intra.sf)
+    # end_time_LFP = len(LFP_synchronized) / self.dataset_intra.sf
+    # LFP_time_offset = np.arange(0, end_time_LFP, 1/self.dataset_intra.sf)
     # external_time_offset = np.linspace(
     #     0, len(external_synchronized) / self.dataset_extra.sf, len(external_synchronized)
     #     )
-    end_time_external = len(external_synchronized) / self.dataset_extra.sf
-    external_time_offset = np.arange(0, end_time_external, 1/self.dataset_extra.sf)
+    nb_points = len(LFP_synchronized)
+    LFP_time_offset = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
+    # end_time_external = len(external_synchronized) / self.dataset_extra.sf
+    # external_time_offset = np.arange(0, end_time_external, 1/self.dataset_extra.sf)
+    nb_points_ext = len(external_synchronized)
+    external_time_offset = np.arange(nb_points_ext) * (1.0 / self.dataset_extra.sf)
     
     # add the time vector as the last column of the dataframes
     LFP_df_offset = pd.DataFrame(LFP_synchronized)

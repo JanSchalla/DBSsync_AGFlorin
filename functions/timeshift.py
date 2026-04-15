@@ -297,21 +297,23 @@ def compute_eff_sf(self):
     time_interval = self.dataset_extra.last_art_start_time - self.dataset_extra.first_art_start_time
     sample_interval = self.dataset_intra.last_art_start_idx - self.dataset_intra.first_art_start_idx
     self.dataset_intra.eff_sf = sample_interval/time_interval
-    self.dataset_intra.sf = self.dataset_intra.eff_sf
+    self.dataset_intra.sf = self.dataset_intra.eff_sf # replace the original sampling frequency with the effective one for all future computations and plotting
     # self.dataset_intra.times = np.linspace(
     #     0, 
     #     self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, 
     #     self.dataset_intra.raw_data.get_data().shape[1]
     #     )
-    end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
-    len_data_intra = self.dataset_intra.raw_data.get_data().shape[1]
-    timescale_intra = np.arange(0, end_time, 1/self.dataset_intra.sf)
-    
-    # correct for sample number mismatch:
-    if len(timescale_intra) != len_data_intra:
-        print(f"Length mismatch between timescale_intra and data_intra: {len(timescale_intra)} vs {len_data_intra}. Correcting for it.")
-        length = len_data_intra
-        timescale_intra = timescale_intra[:length]
+    # end_time = self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf
+    # len_data_intra = self.dataset_intra.raw_data.get_data().shape[1]
+    # timescale_intra = np.arange(0, end_time, 1/self.dataset_intra.sf)
+    nb_points = len(self.dataset_intra.raw_data.get_data()[0])
+    timescale_intra = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
+
+    # # correct for sample number mismatch:
+    # if len(timescale_intra) != len_data_intra:
+    #     print(f"Length mismatch between timescale_intra and data_intra: {len(timescale_intra)} vs {len_data_intra}. Correcting for it.")
+    #     length = len_data_intra
+    #     timescale_intra = timescale_intra[:length]
     self.dataset_intra.times = timescale_intra
 
     self.label_eff_sf.setText(

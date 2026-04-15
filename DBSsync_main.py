@@ -1069,9 +1069,12 @@ class SyncGUI(QMainWindow):
         # Plot the cleaned data overlapped with the raw data
         try :
             if self.config['NoSync'] == True:
-                timescale = np.linspace(0, self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, self.dataset_intra.raw_data.get_data().shape[1])
+                nb_points = len(self.dataset_intra.raw_data.get_data()[0])
+                # timescale = np.linspace(0, self.dataset_intra.raw_data.get_data().shape[1]/self.dataset_intra.sf, self.dataset_intra.raw_data.get_data().shape[1])
             else:
-                timescale = np.linspace(0, self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, self.dataset_intra.synced_data.get_data().shape[1])
+                # timescale = np.linspace(0, self.dataset_intra.synced_data.get_data().shape[1]/self.dataset_intra.sf, self.dataset_intra.synced_data.get_data().shape[1])
+                nb_points = len(self.dataset_intra.synced_data.get_data()[0])
+            timescale = np.arange(nb_points) * (1.0 / self.dataset_intra.sf)
             # plot an overlap of the raw and cleaned data
             self.canvas_ecg_clean.setEnabled(True)
             self.toolbar_ecg_clean.setEnabled(True)
