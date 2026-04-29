@@ -1,5 +1,8 @@
 # DBSsync_GUI
 
+Adaptaions:
+ - A timestamp.txt file is created with the marked timestamps of the intra- and extracranial artifacts. 
+
 This repository is attached to a manuscript which has been submitted for publication on November, the 28th 2025. A preprint describing the toolbox design and functionnalities is available at: https://www.researchsquare.com/article/rs-8228751/v1
 
 Instructions:
