@@ -20,6 +20,9 @@ It contains the following functions:
 import numpy as np
 import scipy
 from matplotlib.backend_bases import MouseButton
+import json
+import os
+from datetime import datetime
 
 
 def compute_timeshift(self):
@@ -315,6 +318,44 @@ def compute_eff_sf(self):
     #     length = len_data_intra
     #     timescale_intra = timescale_intra[:length]
     self.dataset_intra.times = timescale_intra
+    
+    
+    # --- Save intra- and extracranial timestamps to .txt file---
+    artifact_data = {
+        "saved_at": datetime.now().isoformat(timespec="seconds"),
+        "intracranial": {
+            "first_artifact": {
+                "time_s":  float(self.dataset_intra.first_art_start_time),
+                "sample_index": int(self.dataset_intra.first_art_start_idx),
+            },
+            "last_artifact": {
+                "time_s":  float(self.dataset_intra.last_art_start_time),
+                "sample_index": int(self.dataset_intra.last_art_start_idx),
+            },
+        },
+        "extracranial": {
+            "first_artifact": {
+                "time_s":  float(self.dataset_extra.first_art_start_time),
+                "sample_index": int(self.dataset_extra.first_art_start_idx),
+            },
+            "last_artifact": {
+                "time_s":  float(self.dataset_extra.last_art_start_time),
+                "sample_index": int(self.dataset_extra.last_art_start_idx),
+            },
+        },
+    }
+
+    # --- Build the save path ---
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"artifact_timestamps_{timestamp_str}.txt"
+    os.makedirs(self.folder_path, exist_ok=True)
+    save_path = os.path.join(self.folder_path, filename)
+
+    # --- Write JSON to .txt ---
+    with open(save_path, "w") as f:
+        json.dump(artifact_data, f, indent=4)
+
+    print(f"Artifact timestamps saved to: {save_path}")
 
     self.label_eff_sf.setText(
         f"The effective sampling frequency of the intracranial recording is actually {self.dataset_intra.eff_sf} and will be used for synchronization.")
