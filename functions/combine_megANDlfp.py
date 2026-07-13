@@ -13,9 +13,9 @@ from pathlib import Path
 import shutil
 
 
-raw_lfp_fname = '/home/jan/Desktop/SyncTest/run001/SYNCHRONIZED_INTRACRANIAL_CLEANED_Report_Json_Session_Report_20260121T134518_raw.fif'
-raw_meg_fname = '/home/jan/Desktop/SyncTest/run001/SYNCHRONIZED_EXTERNAL_SCTSFB002PD_medON_stimON_run001_260121_raw.fif'
-timestamps_fname = '/home/jan/Desktop/SyncTest/run001/artifact_timestamps_20260429_121415.txt'
+# raw_lfp_fname = '/home/jan/Desktop/SyncTest/run001/SYNCHRONIZED_INTRACRANIAL_CLEANED_Report_Json_Session_Report_20260121T134518_raw.fif'
+# raw_meg_fname = '/home/jan/Desktop/SyncTest/run001/SYNCHRONIZED_EXTERNAL_SCTSFB002PD_medON_stimON_run001_260121_raw.fif'
+# timestamps_fname = '/home/jan/Desktop/SyncTest/run001/artifact_timestamps_20260429_121415.txt'
 
 def combine_meg_and_lfp(raw_meg_fname, raw_lfp_fname, timestamps_fname, 
                         start_crop=2, end_crop=2,
@@ -118,7 +118,9 @@ def combine_meg_and_lfp(raw_meg_fname, raw_lfp_fname, timestamps_fname,
     
     #%% Step 4:
     # Join datastrems
-    lfp_cropped = lfp_cropped.pick(['Channel_ONE_THREE_LEFT','Channel_ONE_THREE_RIGHT']).get_data()
+    picks = mne.pick_channels_regexp(lfp_cropped.ch_names, regexp=r"^Channel")
+
+    lfp_cropped = lfp_cropped.pick(picks).get_data()
     lfp_new = mne.io.RawArray(lfp_cropped, mne.create_info(['LFP_left', 'LFP_right'], sfreq=fs_lfp_resampled, ch_types=['dbs', 'dbs']))
     meg_cropped = meg_cropped.load_data().add_channels([lfp_new], force_update_info=True)
     
