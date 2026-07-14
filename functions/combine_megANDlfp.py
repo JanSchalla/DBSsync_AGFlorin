@@ -83,26 +83,29 @@ def combine_meg_and_lfp(raw_meg_fname, raw_lfp_fname, timestamps_fname,
     fs_meg = raw_meg.info['sfreq']
     fs_lfp = raw_lfp.info['sfreq']
     
-    with open(timestamps_fname, 'r') as f:
-        timestamps = json.load(f)
-     
-    # Convert samples to timepoints in seconds
-    lfp_first_artifact = (timestamps['intracranial']['first_artifact']['sample_index'] - fs_lfp) / fs_lfp 
-    lfp_last_artifact = (timestamps['intracranial']['last_artifact']['sample_index'] - fs_lfp) / fs_lfp
-    
-    meg_first_artifact = (timestamps['extracranial']['first_artifact']['sample_index'] - fs_meg) / fs_meg
-    meg_last_artifact = (timestamps['extracranial']['last_artifact']['sample_index'] - fs_meg) / fs_meg
-    
-    
-    #%% Step 2:
     # Resample
     lfp_resampled = raw_lfp.copy().resample(fs_meg)
     fs_lfp_resampled = lfp_resampled.info['sfreq']
     
-    #%% Step 3:
-    # Crop Timeseries
-    lfp_cropped = lfp_resampled.copy().crop(tmin=start_crop, tmax = lfp_last_artifact - lfp_first_artifact - end_crop)
-    meg_cropped = raw_meg.copy().crop(tmin=start_crop, tmax = meg_last_artifact - meg_first_artifact - end_crop)
+    if timestamps_fname:
+        with open(timestamps_fname, 'r') as f:
+            timestamps = json.load(f)
+         
+        # Convert samples to timepoints in seconds
+        lfp_first_artifact = (timestamps['intracranial']['first_artifact']['sample_index'] - fs_lfp) / fs_lfp 
+        lfp_last_artifact = (timestamps['intracranial']['last_artifact']['sample_index'] - fs_lfp) / fs_lfp
+        
+        meg_first_artifact = (timestamps['extracranial']['first_artifact']['sample_index'] - fs_meg) / fs_meg
+        meg_last_artifact = (timestamps['extracranial']['last_artifact']['sample_index'] - fs_meg) / fs_meg
+        
+        #%% Step 3:
+        # Crop Timeseries
+        lfp_cropped = lfp_resampled.copy().crop(tmin=start_crop, tmax = lfp_last_artifact - lfp_first_artifact - end_crop)
+        meg_cropped = raw_meg.copy().crop(tmin=start_crop, tmax = meg_last_artifact - meg_first_artifact - end_crop)
+    
+    else:
+        lfp_cropped = lfp_resampled.copy().crop(tmin=start_crop)
+        meg_cropped = raw_meg.copy().crop(tmin=start_crop)
     
     # Sanity Check
     lfp_dur = len(lfp_cropped.times)/fs_lfp_resampled
@@ -116,6 +119,7 @@ def combine_meg_and_lfp(raw_meg_fname, raw_lfp_fname, timestamps_fname,
         lfp_cropped = lfp_cropped[:, :min_len]
         meg_cropped = meg_cropped[:, :min_len]
     
+        
     #%% Step 4:
     # Join datastrems
     picks = mne.pick_channels_regexp(lfp_cropped.ch_names, regexp=r"^Channel")
