@@ -116,9 +116,10 @@ def combine_meg_and_lfp(raw_meg_fname, raw_lfp_fname, timestamps_fname,
     if meg_dur != lfp_dur:
         print('Adjusting length to the shorter signal!')
         min_len = min(lfp_cropped.n_times, meg_cropped.n_times)
-        lfp_cropped = lfp_cropped[:, :min_len]
-        meg_cropped = meg_cropped[:, :min_len]
-    
+        tmax = (min_len - 1) / fs_meg
+        lfp_cropped.crop(tmin=0.0, tmax=tmax, include_tmax=True)
+        meg_cropped.crop(tmin=0.0, tmax=tmax, include_tmax=True)
+        
         
     #%% Step 4:
     # Join datastrems
