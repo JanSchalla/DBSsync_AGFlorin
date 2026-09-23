@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import numpy as np
 
 
 # raw_lfp_fname = '/home/jan/Desktop/SyncTest/run001/SYNCHRONIZED_INTRACRANIAL_CLEANED_Report_Json_Session_Report_20260121T134518_raw.fif'
@@ -83,8 +84,30 @@ def combine_meg_and_lfp(raw_meg_fname, raw_lfp_fname, timestamps_fname,
     fs_meg = raw_meg.info['sfreq']
     fs_lfp = raw_lfp.info['sfreq']
     
-    # Resample
-    lfp_resampled = raw_lfp.copy().resample(fs_meg)
+    # Check for NaN's in the LFP -> Need to interpolate these
+    if np.isnan(raw_lfp.get_data()).sum():
+        print('NaN\'s found in LFP. Linear Interpolation will be used to cut them!')
+        lfp_interp = raw_lfp.copy().load_data()
+        x = lfp_interp.get_data()
+        
+        for ch in range(x.shape[0]):
+            valid = np.isfinite(x[ch])
+            sample_idx = np.arange(x.shape[1])
+        
+            if not valid.all():
+                x[ch, ~valid] = np.interp(
+                    sample_idx[~valid],
+                    sample_idx[valid],
+                    x[ch, valid],
+                )
+        
+        lfp_interp._data = x
+        
+        lfp_resampled = lfp_interp.copy().resample(fs_meg)
+    else:
+        # Resample
+        lfp_resampled = raw_lfp.copy().resample(fs_meg)
+
     fs_lfp_resampled = lfp_resampled.info['sfreq']
     
     if timestamps_fname:
